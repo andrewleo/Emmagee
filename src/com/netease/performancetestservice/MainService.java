@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package com.netease.qa.emmagee.service;
+package com.netease.performancetestservice;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -30,6 +30,7 @@ import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 import android.app.Activity;
@@ -59,27 +60,26 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.netease.qa.emmagee.R;
-import com.netease.qa.emmagee.activity.MainPageActivity;
-import com.netease.qa.emmagee.utils.Constants;
-import com.netease.qa.emmagee.utils.CpuInfo;
-import com.netease.qa.emmagee.utils.CurrentInfo;
-import com.netease.qa.emmagee.utils.EncryptData;
-import com.netease.qa.emmagee.utils.MailSender;
-import com.netease.qa.emmagee.utils.MemoryInfo;
-import com.netease.qa.emmagee.utils.MyApplication;
-import com.netease.qa.emmagee.utils.ProcessInfo;
-import com.netease.qa.emmagee.utils.Programe;
-import com.netease.qa.emmagee.utils.Settings;
+import com.netease.performancetestservice.R;
+import com.netease.performancetestservice.utils.Constants;
+import com.netease.performancetestservice.utils.CpuInfo;
+import com.netease.performancetestservice.utils.CurrentInfo;
+import com.netease.performancetestservice.utils.EncryptData;
+import com.netease.performancetestservice.utils.MailSender;
+import com.netease.performancetestservice.utils.MemoryInfo;
+import com.netease.performancetestservice.utils.MyApplication;
+import com.netease.performancetestservice.utils.ProcessInfo;
+import com.netease.performancetestservice.utils.Programe;
+import com.netease.performancetestservice.utils.Settings;
 
 /**
  * Service running in background
  * 
  * @author andrewleo
  */
-public class EmmageeService extends Service {
+public class MainService extends Service {
 
-	private final static String LOG_TAG = "Emmagee-" + EmmageeService.class.getSimpleName();
+	private final static String LOG_TAG = "Emmagee-" + MainService.class.getSimpleName();
 
 	private static final String BLANK_STRING = "";
 
@@ -132,7 +132,9 @@ public class EmmageeService extends Service {
 	private String startTime = "";
 	public static final String SERVICE_ACTION = "com.netease.action.emmageeService";
 	private static final String BATTERY_CHANGED = "android.intent.action.BATTERY_CHANGED";
-
+	private static final String PERF_MONITOR_DIR = "/sdcard/grape";
+	private static final String PERF_MONITOR_FILE = PERF_MONITOR_DIR+"/PerformanceMonitor.csv";
+	
 	@Override
 	public void onCreate() {
 		Log.i(LOG_TAG, "service onCreate");
@@ -174,22 +176,48 @@ public class EmmageeService extends Service {
 		}
 
 	}
+	
+	/**
+	 * wait for test application started.
+	 * 
+	 * @param packageName
+	 *            package name of test application
+	 */
+	public void waitForAppStart(String packageName,Context context) {
+		Log.d(LOG_TAG, "wait for app start");
+		boolean isProcessStarted = false;
+		long startTime = System.currentTimeMillis();
+		while (System.currentTimeMillis() < startTime + Constants.WAIT_START_TIMEOUT) {
+			List<Programe> processList = procInfo.getRunningProcess(context);
+			for (Programe programe : processList) {
+				if ((programe.getPackageName() != null) && (programe.getPackageName().equals(packageName))) {
+					pid = programe.getPid();
+					Log.d(LOG_TAG, "pid:" + pid);
+					uid = programe.getUid();
+					if (pid != 0) {
+						isProcessStarted = true;
+						break;
+					}
+				}
+			}
+			if (isProcessStarted) {
+				break;
+			}
+		}
+	}
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.i(LOG_TAG, "service onStart");
-		PendingIntent contentIntent = PendingIntent.getActivity(getBaseContext(), 0, new Intent(this, MainPageActivity.class), 0);
-		NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-		builder.setContentIntent(contentIntent).setSmallIcon(R.drawable.icon).setWhen(System.currentTimeMillis()).setAutoCancel(true)
-				.setContentTitle("Emmagee");
-		startForeground(startId, builder.build());
-
-		pid = intent.getExtras().getInt("pid");
-		uid = intent.getExtras().getInt("uid");
+		packageName = intent.getExtras().getString("package");
+		Log.d(LOG_TAG, "packageName======"+packageName);
+		Intent startIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+		startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		startActivity(startIntent);
+		waitForAppStart(packageName,getBaseContext());
+		startActivity = intent.resolveActivity(getPackageManager()).getShortClassName();
 		processName = intent.getExtras().getString("processName");
-		packageName = intent.getExtras().getString("packageName");
-		startActivity = intent.getExtras().getString("startActivity");
-
+		
 		cpuInfo = new CpuInfo(getBaseContext(), pid, Integer.toString(uid));
 		readSettingInfo();
 		if (isFloating) {
@@ -236,14 +264,14 @@ public class EmmageeService extends Service {
 		SharedPreferences preferences = Settings.getDefaultSharedPreferences(getApplicationContext());
 		int interval = preferences.getInt(Settings.KEY_INTERVAL, 5);
 		delaytime = interval * 1000;
-		isFloating = preferences.getBoolean(Settings.KEY_ISFLOAT, true);
+		isFloating = preferences.getBoolean(Settings.KEY_ISFLOAT, false);
 		sender = preferences.getString(Settings.KEY_SENDER, BLANK_STRING);
 		password = preferences.getString(Settings.KEY_PASSWORD, BLANK_STRING);
 		recipients = preferences.getString(Settings.KEY_RECIPIENTS, BLANK_STRING);
 		receivers = recipients.split("\\s+");
 		smtp = preferences.getString(Settings.KEY_SMTP, BLANK_STRING);
 		isRoot = preferences.getBoolean(Settings.KEY_ROOT, false);
-		isAutoStop = preferences.getBoolean(Settings.KEY_AUTO_STOP, true);
+		isAutoStop = preferences.getBoolean(Settings.KEY_AUTO_STOP, false);
 	}
 
 	/**
@@ -258,49 +286,33 @@ public class EmmageeService extends Service {
 			mDateTime = formatter.format(cal.getTime().getTime() + 8 * 60 * 60 * 1000);
 		else
 			mDateTime = formatter.format(cal.getTime().getTime());
-		if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
-			// 在4.0以下的低版本上/sdcard连接至/mnt/sdcard，而4.0以上版本则连接至/storage/sdcard0，所以有外接sdcard，/sdcard路径一定存在
-			resultFilePath = "/sdcard" + File.separator + "Emmagee_TestResult_" + mDateTime + ".csv";
-			// resultFilePath =
-			// android.os.Environment.getExternalStorageDirectory() +
-			// File.separator + "Emmagee_TestResult_" + mDateTime + ".csv";
-		} else {
-			resultFilePath = getBaseContext().getFilesDir().getPath() + File.separator + "Emmagee_TestResult_" + mDateTime + ".csv";
-		}
+		resultFilePath = PERF_MONITOR_FILE;
 		try {
 			File resultFile = new File(resultFilePath);
-			resultFile.createNewFile();
+			Log.d(LOG_TAG, "*** resultFilePath ***"+resultFilePath);
+			boolean createDir = new File(PERF_MONITOR_DIR).mkdirs();
+			Log.d(LOG_TAG, "*** createDir ***"+createDir);
+			boolean createFile = resultFile.createNewFile();
+			Log.d(LOG_TAG, "*** createFile ***"+createFile);
 			out = new FileOutputStream(resultFile);
-			osw = new OutputStreamWriter(out);
+			osw = new OutputStreamWriter(out,"GBK");
 			bw = new BufferedWriter(osw);
 			long totalMemorySize = memoryInfo.getTotalMemory();
 			String totalMemory = fomart.format((double) totalMemorySize / 1024);
 			String multiCpuTitle = BLANK_STRING;
 			// titles of multiple cpu cores
-			ArrayList<String> cpuList = cpuInfo.getCpuList();
-			for (int i = 0; i < cpuList.size(); i++) {
-				multiCpuTitle += Constants.COMMA + cpuList.get(i) + getString(R.string.total_usage);
-			}
-			bw.write(getString(R.string.process_package) + Constants.COMMA + packageName + Constants.LINE_END + getString(R.string.process_name)
-					+ Constants.COMMA + processName + Constants.LINE_END + getString(R.string.process_pid) + Constants.COMMA + pid
-					+ Constants.LINE_END + getString(R.string.mem_size) + Constants.COMMA + totalMemory + "MB" + Constants.LINE_END
-					+ getString(R.string.cpu_type) + Constants.COMMA + cpuInfo.getCpuName() + Constants.LINE_END
-					+ getString(R.string.android_system_version) + Constants.COMMA + memoryInfo.getSDKVersion() + Constants.LINE_END
-					+ getString(R.string.mobile_type) + Constants.COMMA + memoryInfo.getPhoneType() + Constants.LINE_END + "UID" + Constants.COMMA
-					+ uid + Constants.LINE_END);
-
-			if (isGrantedReadLogsPermission()) {
-				bw.write(START_TIME);
-			}
-			if (isRoot) {
-				heapData = getString(R.string.native_heap) + Constants.COMMA + getString(R.string.dalvik_heap) + Constants.COMMA;
-			}
-			bw.write(getString(R.string.timestamp) + Constants.COMMA + getString(R.string.top_activity) + Constants.COMMA + heapData
+//			ArrayList<String> cpuList = cpuInfo.getCpuList();
+//			for (int i = 0; i < cpuList.size(); i++) {
+//				multiCpuTitle += Constants.COMMA + cpuList.get(i) + getString(R.string.total_usage);
+//			}
+			// 用例，时间，栈顶activity，pss，内存占比，剩余内存，cpu占比，cpu总占比，流量，电量，电流，电池温度，电压
+			bw.write("测试用例信息" + Constants.COMMA + getString(R.string.timestamp) + Constants.COMMA + getString(R.string.top_activity) + Constants.COMMA
 					+ getString(R.string.used_mem_PSS) + Constants.COMMA + getString(R.string.used_mem_ratio) + Constants.COMMA
 					+ getString(R.string.mobile_free_mem) + Constants.COMMA + getString(R.string.app_used_cpu_ratio) + Constants.COMMA
 					+ getString(R.string.total_used_cpu_ratio) + multiCpuTitle + Constants.COMMA + getString(R.string.traffic) + Constants.COMMA
 					+ getString(R.string.battery) + Constants.COMMA + getString(R.string.current) + Constants.COMMA + getString(R.string.temperature)
 					+ Constants.COMMA + getString(R.string.voltage) + Constants.LINE_END);
+			bw.flush();
 		} catch (IOException e) {
 			Log.e(LOG_TAG, e.getMessage());
 		}
@@ -415,7 +427,7 @@ public class EmmageeService extends Service {
 						line = line.substring(0, line.indexOf("total"));
 					}
 					startTime = line.substring(line.lastIndexOf("+") + 1, line.lastIndexOf("ms") + 2);
-					Toast.makeText(EmmageeService.this, getString(R.string.start_time) + startTime, Toast.LENGTH_LONG).show();
+					Toast.makeText(MainService.this, getString(R.string.start_time) + startTime, Toast.LENGTH_LONG).show();
 					isGetStartTime = false;
 					break;
 				}
@@ -444,6 +456,7 @@ public class EmmageeService extends Service {
 	 * @throws IOException
 	 */
 	private void dataRefresh() {
+		Log.d(LOG_TAG, "*** dataRefresh ***");
 		int pidMemory = memoryInfo.getPidMemorySize(pid, getBaseContext());
 		long freeMemory = memoryInfo.getFreeMemorySize(getBaseContext());
 		String freeMemoryKb = fomart.format((double) freeMemory / 1024);
@@ -527,8 +540,8 @@ public class EmmageeService extends Service {
 	public void closeOpenedStream() {
 		try {
 			if (bw != null) {
-				bw.write(getString(R.string.comment1) + Constants.LINE_END + getString(R.string.comment2) + Constants.LINE_END
-						+ getString(R.string.comment3) + Constants.LINE_END + getString(R.string.comment4) + Constants.LINE_END);
+//				bw.write(getString(R.string.comment1) + Constants.LINE_END + getString(R.string.comment2) + Constants.LINE_END
+//						+ getString(R.string.comment3) + Constants.LINE_END + getString(R.string.comment4) + Constants.LINE_END);
 				bw.close();
 			}
 			if (osw != null)
@@ -567,7 +580,7 @@ public class EmmageeService extends Service {
 		if (isSendSuccessfully) {
 			Toast.makeText(this, getString(R.string.send_success_toast) + recipients, Toast.LENGTH_LONG).show();
 		} else {
-			Toast.makeText(this, getString(R.string.send_fail_toast) + EmmageeService.resultFilePath, Toast.LENGTH_LONG).show();
+			Toast.makeText(this, getString(R.string.send_fail_toast) + MainService.resultFilePath, Toast.LENGTH_LONG).show();
 		}
 		super.onDestroy();
 		stopForeground(true);
@@ -593,7 +606,7 @@ public class EmmageeService extends Service {
 			reader.close();
 			// replace a word in a file
 			String newtext = oldtext.replaceAll(replaceType, replaceString);
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), getString(R.string.csv_encoding)));
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), "GBK"));
 			writer.write(newtext);
 			writer.close();
 		} catch (IOException e) {

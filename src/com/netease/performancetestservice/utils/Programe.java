@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package com.netease.qa.emmagee.utils;
+package com.netease.performancetestservice.utils;
 
 import android.graphics.drawable.Drawable;
 

@@ -1,4 +1,4 @@
-package com.netease.qa.emmagee.utils;
+package com.netease.performancetestservice.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;

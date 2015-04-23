@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package com.netease.qa.emmagee.utils;
+package com.netease.performancetestservice.utils;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
