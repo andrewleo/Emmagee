@@ -13,8 +13,8 @@
         <fileset dir="libs" >
             <include name="*.jar" />
         </fileset>
-        <fileset dir="C:\Program Files\Android\android-sdk\platforms" >
-            <include name="android-10\android.jar" />
+        <fileset dir="/Library/adt-bundle-mac-x86_64-20130729/sdk/platforms" >
+            <include name="android-10/android.jar" />
         </fileset>
     </path>
 

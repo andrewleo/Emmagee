@@ -14,7 +14,7 @@
  *  limitations under the License.
  *
  */
-package com.netease.emmagee.performance;
+package com.netease.emmagee.performance.utils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;

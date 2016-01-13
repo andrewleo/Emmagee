@@ -25,6 +25,11 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+import com.netease.emmagee.performance.utils.Constants;
+import com.netease.emmagee.performance.utils.MemoryInfo;
+import com.netease.emmagee.performance.utils.TrafficInfo;
+import com.netease.emmagee.performance.utils.CpuInfo;
+
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.BroadcastReceiver;
@@ -32,7 +37,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
-import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
@@ -81,18 +85,13 @@ public class PerformanceMonitor {
 		receiver = new BatteryInfoBroadcastReceiver();
 		IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
 		context.registerReceiver(receiver, filter);
-
-		// formatterTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		// ObjectSerializable serializable = (ObjectSerializable)
-		// intent.getSerializableExtra("orange");
-		// orange = serializable.getOrange();
 		getAppInfo(packageName);
 		// 不在初始化的时候创建报告，而是在真正做记录的时候创建
 		// creatReport(toolName, mDateTime);
 		this.toolName = toolName;
 		cpuInfo = new CpuInfo();
 		memoryInfo = new MemoryInfo();
-		networkInfo = new TrafficInfo();
+		networkInfo = new TrafficInfo(String.valueOf(uid));
 	}
 
 	/**
@@ -155,23 +154,23 @@ public class PerformanceMonitor {
 			if (!resultFile.exists()) {
 				resultFile.createNewFile();
 				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
-				osw = new OutputStreamWriter(out, "GBK");
+				osw = new OutputStreamWriter(out, "utf-8");
 				bw = new BufferedWriter(osw);
 				// 生成头文件
-				bw.write("测试用例信息" + "," + "时间" + "," + "应用占用内存PSS(MB)" + "," + "应用占用内存比(%)" + "," + " 机器剩余内存(MB)" + "," + "应用占用CPU率(%)" + ","
-						+ "CPU总使用率(%)" + "," + "流量(KB)" + "," + "当前电量" + "," + "电池温度(C)" + "," + "电压(V)" + "\r\n");
+				bw.write(HEADER_TEMPLATE + Constants.LINE_END);
 				bw.flush();
 			} else {
 				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
-				osw = new OutputStreamWriter(out, "GBK");
+				osw = new OutputStreamWriter(out, "utf-8");
 				bw = new BufferedWriter(osw);
 			}
 		} catch (IOException e) {
 			Log.e(LOG_TAG, e.getMessage());
 		}
-
 		Log.d(LOG_TAG, "end write report");
 	}
+	
+	private static final String HEADER_TEMPLATE = "测试用例信息,时间,应用占用内存PSS(MB),应用占用内存比(%), 机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),当前电量,电池温度(C),电压(V)";
 
 	/**
 	 * write data into certain file
@@ -180,12 +179,12 @@ public class PerformanceMonitor {
 		if (isInitialStatic) {
 			// 创建相应的性能数据报告
 			creatReport(toolName, mDateTime);
-			startTraff = networkInfo.getTrafficInfo(uid);
+			startTraff = networkInfo.getTrafficInfo();
 			isInitialStatic = false;
 		}
 
 		// Network
-		endTraff = networkInfo.getTrafficInfo(uid);
+		endTraff = networkInfo.getTrafficInfo();
 		if (startTraff == -1)
 			intervalTraff = -1;
 		else
@@ -210,15 +209,18 @@ public class PerformanceMonitor {
 		}
 
 		try {
-			if (intervalTraff == -1) {
-				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
-						+ processCpuRatio + "," + totalCpuRatio + "," + "本程序或本设备不支持流量统计" + "," + currentBatt + "," + temperature + "," + voltage
-						+ "\r\n");
-			} else {
-				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
-						+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + temperature + "," + voltage
-						+ "\r\n");
-			}
+			bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
+					+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + temperature + "," + voltage
+					+ "\r\n");
+//			if (intervalTraff == -1) {
+//				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
+//						+ processCpuRatio + "," + totalCpuRatio + "," + "本程序或本设备不支持流量统计" + "," + currentBatt + "," + temperature + "," + voltage
+//						+ "\r\n");
+//			} else {
+//				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
+//						+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + temperature + "," + voltage
+//						+ "\r\n");
+//			}
 			bw.flush();
 			Log.i(LOG_TAG, "*** writePerformanceData on " + mDateTime + " *** ");
 		} catch (Exception e) {
