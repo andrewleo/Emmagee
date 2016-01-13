@@ -25,11 +25,6 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
-import com.netease.emmagee.performance.utils.Constants;
-import com.netease.emmagee.performance.utils.MemoryInfo;
-import com.netease.emmagee.performance.utils.TrafficInfo;
-import com.netease.emmagee.performance.utils.CpuInfo;
-
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.BroadcastReceiver;
@@ -39,6 +34,13 @@ import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.util.Log;
+
+import com.netease.emmagee.performance.utils.Constants;
+import com.netease.emmagee.performance.utils.CpuInfo;
+import com.netease.emmagee.performance.utils.CurrentInfo;
+import com.netease.emmagee.performance.utils.MemoryInfo;
+import com.netease.emmagee.performance.utils.ProcessInfo;
+import com.netease.emmagee.performance.utils.TrafficInfo;
 
 /**
  * Service running in background
@@ -70,6 +72,7 @@ public class PerformanceMonitor {
 	private boolean isRunnableStop = false;
 	private BatteryInfoBroadcastReceiver receiver;
 	private Context context;
+	private CurrentInfo currentInfo;
 
 	private String toolName;
 
@@ -92,6 +95,7 @@ public class PerformanceMonitor {
 		cpuInfo = new CpuInfo();
 		memoryInfo = new MemoryInfo();
 		networkInfo = new TrafficInfo(String.valueOf(uid));
+		currentInfo = new CurrentInfo();
 	}
 
 	/**
@@ -119,15 +123,6 @@ public class PerformanceMonitor {
 	 */
 	private void creatReport(String toolName, String dateTime) {
 		Log.d(LOG_TAG, "start write report");
-		// Calendar cal = Calendar.getInstance();
-		// SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-		// String mDateTime;
-		// if ((Build.MODEL.equals("sdk")) ||
-		// (Build.MODEL.equals("google_sdk")))
-		// mDateTime = formatter.format(cal.getTime().getTime() + 8 * 60 * 60
-		// * 1000);
-		// else
-		// mDateTime = formatter.format(cal.getTime().getTime());
 
 		String dir = "";
 		if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
@@ -141,7 +136,7 @@ public class PerformanceMonitor {
 		// resultFilePath = dir + File.separator + toolName + "-" +
 		// Build.VERSION.SDK_INT + "-"
 		// + Build.MODEL.replace(" ", "-") + "-PerformanceMonitor" + ".csv";
-		resultFilePath = dir + File.separator + "PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
+		resultFilePath = "/sdcard/grape/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
 		try {
 			// 创建目录
 			File fileDir = new File(dir);
@@ -170,8 +165,8 @@ public class PerformanceMonitor {
 		Log.d(LOG_TAG, "end write report");
 	}
 	
-	private static final String HEADER_TEMPLATE = "测试用例信息,时间,应用占用内存PSS(MB),应用占用内存比(%), 机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),当前电量,电池温度(C),电压(V)";
-
+	private static final String HEADER_TEMPLATE = "测试用例信息,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V)";
+	
 	/**
 	 * write data into certain file
 	 */
@@ -207,20 +202,25 @@ public class PerformanceMonitor {
 		if (totalMemorySize != 0) {
 			percent = fomart.format(((double) pidMemory / (double) totalMemorySize) * 100);
 		}
+		
+		// TopActivity
+		String topActivity = ProcessInfo.getTopActivity(context);
+		
+		// 电流
+		String current = String.valueOf(currentInfo.getCurrentValue());
+		// 异常数据过滤
+		try {
+			if (Math.abs(Double.parseDouble(currentBatt)) >= 500) {
+				current = Constants.NA;
+			}
+		} catch (Exception e) {
+			current = Constants.NA;
+		}
 
 		try {
-			bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
-					+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + temperature + "," + voltage
+			bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
+					+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + current + ","+ temperature + "," + voltage
 					+ "\r\n");
-//			if (intervalTraff == -1) {
-//				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
-//						+ processCpuRatio + "," + totalCpuRatio + "," + "本程序或本设备不支持流量统计" + "," + currentBatt + "," + temperature + "," + voltage
-//						+ "\r\n");
-//			} else {
-//				bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + pss + "," + percent + "," + freeMem + ","
-//						+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + temperature + "," + voltage
-//						+ "\r\n");
-//			}
 			bw.flush();
 			Log.i(LOG_TAG, "*** writePerformanceData on " + mDateTime + " *** ");
 		} catch (Exception e) {

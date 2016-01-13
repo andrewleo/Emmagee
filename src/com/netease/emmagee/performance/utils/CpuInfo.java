@@ -19,14 +19,7 @@ package com.netease.emmagee.performance.utils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.text.DecimalFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 
-
-import android.content.Context;
-import android.os.Build;
 import android.util.Log;
 
 /**
