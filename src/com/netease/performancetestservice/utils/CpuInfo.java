@@ -302,7 +302,7 @@ public class CpuInfo {
 					String trafValue;
 					// whether certain device supports traffic statics or not
 					if (traffic == -1) {
-						trafValue = Constants.NA;
+						trafValue = "-1";
 					} else {
 						trafValue = String.valueOf(traffic);
 					}

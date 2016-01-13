@@ -295,16 +295,11 @@ public class MainService extends Service {
 			boolean createFile = resultFile.createNewFile();
 			Log.d(LOG_TAG, "*** createFile ***"+createFile);
 			out = new FileOutputStream(resultFile);
-			osw = new OutputStreamWriter(out,"GBK");
+			osw = new OutputStreamWriter(out,"utf-8");
 			bw = new BufferedWriter(osw);
 			long totalMemorySize = memoryInfo.getTotalMemory();
 			String totalMemory = fomart.format((double) totalMemorySize / 1024);
 			String multiCpuTitle = BLANK_STRING;
-			// titles of multiple cpu cores
-//			ArrayList<String> cpuList = cpuInfo.getCpuList();
-//			for (int i = 0; i < cpuList.size(); i++) {
-//				multiCpuTitle += Constants.COMMA + cpuList.get(i) + getString(R.string.total_usage);
-//			}
 			// 用例，时间，栈顶activity，pss，内存占比，剩余内存，cpu占比，cpu总占比，流量，电量，电流，电池温度，电压
 			bw.write("测试用例信息" + Constants.COMMA + getString(R.string.timestamp) + Constants.COMMA + getString(R.string.top_activity) + Constants.COMMA
 					+ getString(R.string.used_mem_PSS) + Constants.COMMA + getString(R.string.used_mem_ratio) + Constants.COMMA
@@ -606,7 +601,7 @@ public class MainService extends Service {
 			reader.close();
 			// replace a word in a file
 			String newtext = oldtext.replaceAll(replaceType, replaceString);
-			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), "GBK"));
+			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), "utf-8"));
 			writer.write(newtext);
 			writer.close();
 		} catch (IOException e) {
