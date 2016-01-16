@@ -13,8 +13,8 @@
         <fileset dir="libs" >
             <include name="*.jar" />
         </fileset>
-        <fileset dir="/Library/adt-bundle-mac-x86_64-20130729/sdk/platforms" >
-            <include name="android-10/android.jar" />
+        <fileset dir="D:\Program\Develop\Android\sdk\platforms" >
+            <include name="android-10\android.jar" />
         </fileset>
     </path>
 
@@ -37,10 +37,7 @@
 	<target name="build" depends="compile" description="只选择我们需要的class文件打成jar包">
 		<jar jarfile="${jarFile}" basedir="${classes}">
 		   <include name="com/netease/emmagee/performance/*.class" />
-		   <!-- <include name="com/netease/emmagee/performance/PerformanceMonitor.class" /> 
-		   <include name="com/netease/qa/emmagee/utils/CpuInfo.class" /> 
-		   <include name="com/netease/qa/emmagee/utils/MemoryInfo.class" /> 
-		   <include name="com/netease/qa/emmagee/utils/TrafficInfo.class" /> -->
+		   <include name="com/netease/emmagee/performance/utils/*.class" />
 		</jar>
 	</target>
 

@@ -124,19 +124,8 @@ public class PerformanceMonitor {
 	private void creatReport(String toolName, String dateTime) {
 		Log.d(LOG_TAG, "start write report");
 
-		String dir = "";
-		if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
-			dir = android.os.Environment.getExternalStorageDirectory() + File.separator + toolName;
-
-		} else {
-			dir = context.getFilesDir().getPath() + File.separator + toolName;
-		}
-		// resultFilePath = dir + File.separator + toolName + "-" + mDateTime +
-		// ".csv";
-		// resultFilePath = dir + File.separator + toolName + "-" +
-		// Build.VERSION.SDK_INT + "-"
-		// + Build.MODEL.replace(" ", "-") + "-PerformanceMonitor" + ".csv";
-		resultFilePath = "/sdcard/grape/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
+		String dir = "/sdcard/grape";
+		resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
 		try {
 			// 创建目录
 			File fileDir = new File(dir);
