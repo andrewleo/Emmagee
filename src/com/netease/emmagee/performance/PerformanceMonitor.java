@@ -154,12 +154,12 @@ public class PerformanceMonitor {
 		Log.d(LOG_TAG, "end write report");
 	}
 	
-	private static final String HEADER_TEMPLATE = "测试用例信息,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V)";
+	private static final String HEADER_TEMPLATE = "用例步骤描述,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V),截图";
 	
 	/**
 	 * write data into certain file
 	 */
-	public void writePerformanceData(String mDateTime) {
+	public void writePerformanceData(String mDateTime, String desc, String screenshot) {
 		if (isInitialStatic) {
 			// 创建相应的性能数据报告
 			creatReport(toolName, mDateTime);
@@ -187,7 +187,7 @@ public class PerformanceMonitor {
 		long freeMemory = memoryInfo.getFreeMemorySize(context);
 		String freeMem = fomart.format((double) freeMemory / 1024);
 		long totalMemorySize = memoryInfo.getTotalMemory();
-		String percent = "统计出错";
+		String percent = "-1";
 		if (totalMemorySize != 0) {
 			percent = fomart.format(((double) pidMemory / (double) totalMemorySize) * 100);
 		}
@@ -206,10 +206,14 @@ public class PerformanceMonitor {
 			current = Constants.NA;
 		}
 
+		if (null == desc || "".equals(desc.trim())){
+			desc = this.getTestCaseInfo() + "-" + this.getActionInfo();
+		}
+		
 		try {
-			bw.write(this.getTestCaseInfo() + "-" + this.getActionInfo() + "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
+			bw.write(desc + "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
 					+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + current + ","+ temperature + "," + voltage
-					+ "\r\n");
+					+ "," + replaceNull(screenshot) + "\r\n");
 			bw.flush();
 			Log.i(LOG_TAG, "*** writePerformanceData on " + mDateTime + " *** ");
 		} catch (Exception e) {
@@ -220,6 +224,23 @@ public class PerformanceMonitor {
 		idleCpu2 = idleCpu1;
 		totalCpu2 = totalCpu1;
 	}
+	
+	/**
+	 * write data into certain file
+	 */
+	public void writePerformanceData(String mDateTime) {
+		writePerformanceData(mDateTime, null, null);
+	}
+	
+	/**
+	 * 替换所有的null
+	 * @param input
+	 * @return
+	 */
+	public String replaceNull(String input) {
+		  return input == null ? "" : input;
+	}
+
 
 	private Runnable task = new Runnable() {
 
@@ -341,4 +362,5 @@ public class PerformanceMonitor {
 		}
 		return actionInfo;
 	}
+	
 }
