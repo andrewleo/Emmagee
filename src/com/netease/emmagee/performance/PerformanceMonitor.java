@@ -104,18 +104,22 @@ public class PerformanceMonitor {
 	 * @param packageName
 	 */
 	private void getAppInfo(String packageName) {
-		ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-		List<RunningAppProcessInfo> run = am.getRunningAppProcesses();
-		// PackageManager pm = context.getPackageManager();
-		for (RunningAppProcessInfo runningProcess : run) {
-			if (packageName.equals(runningProcess.processName)) {
-				uid = runningProcess.uid;
-				pid = runningProcess.pid;
-				Log.d(LOG_TAG, "pid = " + pid);
-				Log.d(LOG_TAG, "uid = " + uid);
-				break;
-			}
-		}
+		uid = android.os.Process.myUid();
+		pid = android.os.Process.myPid();
+		Log.d(LOG_TAG, "pid = " + pid);
+		Log.d(LOG_TAG, "uid = " + uid);
+//		ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+//		List<RunningAppProcessInfo> run = am.getRunningAppProcesses();
+//		// PackageManager pm = context.getPackageManager();
+//		for (RunningAppProcessInfo runningProcess : run) {
+//			if (packageName.equals(runningProcess.processName)) {
+//				uid = runningProcess.uid;
+//				pid = runningProcess.pid;
+//				Log.d(LOG_TAG, "pid = " + pid);
+//				Log.d(LOG_TAG, "uid = " + uid);
+//				break;
+//			}
+//		}
 	}
 
 	/**
@@ -132,22 +136,17 @@ public class PerformanceMonitor {
 			if (!fileDir.exists()) {
 				fileDir.mkdirs();
 			}
-			// 创建文件
+			// 先清除原本就存在的文件
 			File resultFile = new File(resultFilePath);
+			resultFile.delete();
 			// 只有在性能结果文件不存在的情况下才创建文件，并生成头文件，让文件只保持一份就好
-			if (!resultFile.exists()) {
-				resultFile.createNewFile();
-				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
-				osw = new OutputStreamWriter(out, "utf-8");
-				bw = new BufferedWriter(osw);
-				// 生成头文件
-				bw.write(HEADER_TEMPLATE + Constants.LINE_END);
-				bw.flush();
-			} else {
-				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
-				osw = new OutputStreamWriter(out, "utf-8");
-				bw = new BufferedWriter(osw);
-			}
+			resultFile.createNewFile();
+			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			osw = new OutputStreamWriter(out, "utf-8");
+			bw = new BufferedWriter(osw);
+			// 生成头文件
+			bw.write(HEADER_TEMPLATE + Constants.LINE_END);
+			bw.flush();
 		} catch (IOException e) {
 			Log.e(LOG_TAG, e.getMessage());
 		}
@@ -159,7 +158,7 @@ public class PerformanceMonitor {
 	/**
 	 * write data into certain file
 	 */
-	public void writePerformanceData(String mDateTime, String desc, String screenshot) {
+	public void writePerformanceData(String mDateTime, String screenshot, String desc) {
 		if (isInitialStatic) {
 			// 创建相应的性能数据报告
 			creatReport(toolName, mDateTime);
