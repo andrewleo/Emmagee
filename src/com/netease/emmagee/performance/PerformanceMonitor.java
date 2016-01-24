@@ -22,11 +22,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
-import java.util.List;
+import java.util.Locale;
 
-import android.app.ActivityManager;
-import android.app.ActivityManager.RunningAppProcessInfo;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -67,8 +66,8 @@ public class PerformanceMonitor {
 	private DecimalFormat fomart;
 	private boolean isInitialStatic = true;
 	private long processCpu1, processCpu2, totalCpu1, totalCpu2, idleCpu1, idleCpu2;
-	private long startTraff, endTraff, intervalTraff;
-	private String currentBatt, temperature, voltage;
+	private long startTraff, endTraff;
+	private String currentBatt, temperature, voltage, intervalTraff;
 	private boolean isRunnableStop = false;
 	private BatteryInfoBroadcastReceiver receiver;
 	private Context context;
@@ -82,8 +81,11 @@ public class PerformanceMonitor {
 		this.context = context;
 
 		fomart = new DecimalFormat();
+		fomart.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
+		fomart.setGroupingUsed(false);
 		fomart.setMaximumFractionDigits(2);
-		fomart.setMinimumFractionDigits(2);
+		fomart.setMinimumFractionDigits(0);
+
 		// 注册广播监听电量
 		receiver = new BatteryInfoBroadcastReceiver();
 		IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
@@ -108,18 +110,6 @@ public class PerformanceMonitor {
 		pid = android.os.Process.myPid();
 		Log.d(LOG_TAG, "pid = " + pid);
 		Log.d(LOG_TAG, "uid = " + uid);
-//		ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-//		List<RunningAppProcessInfo> run = am.getRunningAppProcesses();
-//		// PackageManager pm = context.getPackageManager();
-//		for (RunningAppProcessInfo runningProcess : run) {
-//			if (packageName.equals(runningProcess.processName)) {
-//				uid = runningProcess.uid;
-//				pid = runningProcess.pid;
-//				Log.d(LOG_TAG, "pid = " + pid);
-//				Log.d(LOG_TAG, "uid = " + uid);
-//				break;
-//			}
-//		}
 	}
 
 	/**
@@ -158,61 +148,72 @@ public class PerformanceMonitor {
 	/**
 	 * write data into certain file
 	 */
-	public void writePerformanceData(String mDateTime, String screenshot, String desc) {
+	public void writePerformanceData(String mDateTime, String screenshot, String desc, boolean writePerf) {
 		if (isInitialStatic) {
 			// 创建相应的性能数据报告
 			creatReport(toolName, mDateTime);
 			startTraff = networkInfo.getTrafficInfo();
 			isInitialStatic = false;
 		}
-
-		// Network
-		endTraff = networkInfo.getTrafficInfo();
-		if (startTraff == -1)
-			intervalTraff = -1;
-		else
-			intervalTraff = (endTraff - startTraff + 1023) / 1024;
-
-		// CPU
-		processCpu1 = cpuInfo.readCpuStat(pid)[0];
-		idleCpu1 = cpuInfo.readCpuStat(pid)[1];
-		totalCpu1 = cpuInfo.readCpuStat(pid)[2];
-		String processCpuRatio = fomart.format(100 * ((double) (processCpu1 - processCpu2) / ((double) (totalCpu1 - totalCpu2))));
-		String totalCpuRatio = fomart.format(100 * ((double) ((totalCpu1 - idleCpu1) - (totalCpu2 - idleCpu2)) / (double) (totalCpu1 - totalCpu2)));
-
-		// Memory
-		long pidMemory = memoryInfo.getPidMemorySize(pid, context);
-		String pss = fomart.format((double) pidMemory / 1024);
-		long freeMemory = memoryInfo.getFreeMemorySize(context);
-		String freeMem = fomart.format((double) freeMemory / 1024);
-		long totalMemorySize = memoryInfo.getTotalMemory();
-		String percent = "-1";
-		if (totalMemorySize != 0) {
-			percent = fomart.format(((double) pidMemory / (double) totalMemorySize) * 100);
-		}
 		
-		// TopActivity
-		String topActivity = ProcessInfo.getTopActivity(context);
-		
-		// 电流
-		String current = String.valueOf(currentInfo.getCurrentValue());
-		// 异常数据过滤
-		try {
-			if (Math.abs(Double.parseDouble(currentBatt)) >= 500) {
+		String content = "";
+		String topActivity, pss,percent,freeMem,processCpuRatio,totalCpuRatio, current;
+		topActivity=pss=percent=freeMem=processCpuRatio=totalCpuRatio=current ="";
+
+		// 如果是在操作前记录，则性能数据全部写0
+		if (writePerf) {
+			// Network
+			endTraff = networkInfo.getTrafficInfo();
+			if (startTraff == -1)
+				intervalTraff = "-1";
+			else
+				intervalTraff = String.valueOf((endTraff - startTraff + 1023) / 1024);
+	
+			// CPU
+			processCpu1 = cpuInfo.readCpuStat(pid)[0];
+			idleCpu1 = cpuInfo.readCpuStat(pid)[1];
+			totalCpu1 = cpuInfo.readCpuStat(pid)[2];
+			processCpuRatio = fomart.format(100 * ((double) (processCpu1 - processCpu2) / ((double) (totalCpu1 - totalCpu2))));
+			totalCpuRatio = fomart.format(100 * ((double) ((totalCpu1 - idleCpu1) - (totalCpu2 - idleCpu2)) / (double) (totalCpu1 - totalCpu2)));
+	
+			// Memory
+			long pidMemory = memoryInfo.getPidMemorySize(pid, context);
+			pss = fomart.format((double) pidMemory / 1024);
+			long freeMemory = memoryInfo.getFreeMemorySize(context);
+			freeMem = fomart.format((double) freeMemory / 1024);
+			long totalMemorySize = memoryInfo.getTotalMemory();
+			 percent = "-1";
+			if (totalMemorySize != 0) {
+				percent = fomart.format(((double) pidMemory / (double) totalMemorySize) * 100);
+			}
+			
+			// TopActivity
+			topActivity = ProcessInfo.getTopActivity(context);
+			
+			// 电流
+			current = String.valueOf(currentInfo.getCurrentValue());
+			// 异常数据过滤
+			try {
+				if (Math.abs(Double.parseDouble(currentBatt)) >= 500) {
+					current = Constants.NA;
+				}
+			} catch (Exception e) {
 				current = Constants.NA;
 			}
-		} catch (Exception e) {
-			current = Constants.NA;
-		}
-
-		if (null == desc || "".equals(desc.trim())){
-			desc = this.getTestCaseInfo() + "-" + this.getActionInfo();
+	
+			if (null == desc || "".equals(desc.trim())){
+				desc = this.getTestCaseInfo() + "-" + this.getActionInfo();
+			}
+			
+			content = "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
+							+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + current + ","+ temperature + "," + voltage
+							+ "," + replaceNull(screenshot) + "\r\n";
+		} else {
+			content = desc;
 		}
 		
 		try {
-			bw.write(desc + "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
-					+ processCpuRatio + "," + totalCpuRatio + "," + intervalTraff + "," + currentBatt + "," + current + ","+ temperature + "," + voltage
-					+ "," + replaceNull(screenshot) + "\r\n");
+			bw.write(content);
 			bw.flush();
 			Log.i(LOG_TAG, "*** writePerformanceData on " + mDateTime + " *** ");
 		} catch (Exception e) {
@@ -228,7 +229,7 @@ public class PerformanceMonitor {
 	 * write data into certain file
 	 */
 	public void writePerformanceData(String mDateTime) {
-		writePerformanceData(mDateTime, null, null);
+		writePerformanceData(mDateTime, null, null, true);
 	}
 	
 	/**
