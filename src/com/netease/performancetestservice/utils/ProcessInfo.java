@@ -41,40 +41,23 @@ public class ProcessInfo {
 	private static final String PACKAGE_NAME = "com.netease.performancetestservice";
 
 	/**
-	 * get information of all running processes,including package name ,process
-	 * name ,icon ,pid and uid.
-	 * 
+	 * 获取被测应用的信息
 	 * @param context
-	 *            context of activity
-	 * @return running processes list
+	 * @return
 	 */
-	public List<Programe> getRunningProcess(Context context) {
-		Log.i(LOG_TAG, "get running processes");
-
+	public Programe getAppInfo(Context context, String packageName){
+		Log.i(LOG_TAG, "getAppInfo");
 		ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
 		List<RunningAppProcessInfo> run = am.getRunningAppProcesses();
-		PackageManager pm = context.getPackageManager();
-		List<Programe> progressList = new ArrayList<Programe>();
-
-		for (ApplicationInfo appinfo : getPackagesInfo(context)) {
-			Programe programe = new Programe();
-			if (((appinfo.flags & ApplicationInfo.FLAG_SYSTEM) > 0) || ((appinfo.processName != null) && (appinfo.processName.equals(PACKAGE_NAME)))) {
-				continue;
+		Programe programe = new Programe();
+		for (RunningAppProcessInfo runningProcess : run) {
+			if ((runningProcess.processName != null) && runningProcess.processName.equals(packageName)) {
+				programe.setPid(runningProcess.pid);
+				programe.setUid(runningProcess.uid);
+				break;
 			}
-			for (RunningAppProcessInfo runningProcess : run) {
-				if ((runningProcess.processName != null) && runningProcess.processName.equals(appinfo.processName)) {
-					programe.setPid(runningProcess.pid);
-					programe.setUid(runningProcess.uid);
-					break;
-				}
-			}
-			programe.setPackageName(appinfo.processName);
-			programe.setProcessName(appinfo.loadLabel(pm).toString());
-			programe.setIcon(appinfo.loadIcon(pm));
-			progressList.add(programe);
 		}
-		Collections.sort(progressList);
-		return progressList;
+		return programe;
 	}
 
 	/**
@@ -91,25 +74,6 @@ public class ProcessInfo {
 	}
 
 	/**
-	 * get pid by package name
-	 * 
-	 * @param context
-	 *            context of activity
-	 * @param packageName
-	 *            package name of monitoring app
-	 * @return pid
-	 */
-	public Programe getProgrameByPackageName(Context context, String packageName) {
-		List<Programe> processList = getRunningProcess(context);
-		for (Programe programe : processList) {
-			if ((programe.getPackageName() != null) && (programe.getPackageName().equals(packageName))) {
-				return programe;
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * get top activity name
 	 * 
 	 * @param context
@@ -117,12 +81,15 @@ public class ProcessInfo {
 	 * @return top activity name
 	 */
 	public static String getTopActivity(Context context) {
-		ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-		List<RunningTaskInfo> runningTaskInfos = manager.getRunningTasks(1);
-		if (runningTaskInfos != null)
-			return (runningTaskInfos.get(0).topActivity).toString();
-		else
-			return null;
+		try {
+			ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+			List<RunningTaskInfo> runningTaskInfos = manager.getRunningTasks(1);
+			if (runningTaskInfos != null)
+				return (runningTaskInfos.get(0).topActivity).toString();
+		} catch(Exception e){
+			Log.w(LOG_TAG, "getTopActivity exception: " + e.getMessage());
+		}
+		return "";
 	}
 	
 
