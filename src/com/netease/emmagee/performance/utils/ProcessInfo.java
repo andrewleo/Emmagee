@@ -116,14 +116,14 @@ public class ProcessInfo {
 	 *            context of activity
 	 * @return top activity name
 	 */
-	public static String getTopActivity(Context context) {
-		ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-		List<RunningTaskInfo> runningTaskInfos = manager.getRunningTasks(1);
-		if (runningTaskInfos != null)
-			return (runningTaskInfos.get(0).topActivity).toString();
-		else
-			return null;
-	}
+//	public static String getTopActivity(Context context) {
+//		ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+//		List<RunningTaskInfo> runningTaskInfos = manager.getRunningTasks(1);
+//		if (runningTaskInfos != null)
+//			return (runningTaskInfos.get(0).topActivity).toString();
+//		else
+//			return null;
+//	}
 	
 
 }

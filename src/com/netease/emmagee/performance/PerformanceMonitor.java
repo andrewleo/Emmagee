@@ -75,8 +75,6 @@ public class PerformanceMonitor {
 
 	private String toolName;
 
-	// private OrangeSolo orange;
-
 	public PerformanceMonitor(Context context, String packageName, String toolName, String mDateTime) {
 		this.context = context;
 
@@ -188,7 +186,7 @@ public class PerformanceMonitor {
 			}
 			
 			// TopActivity
-			topActivity = ProcessInfo.getTopActivity(context);
+//			topActivity = ProcessInfo.getTopActivity(context);
 			
 			// 电流
 			current = String.valueOf(currentInfo.getCurrentValue());
