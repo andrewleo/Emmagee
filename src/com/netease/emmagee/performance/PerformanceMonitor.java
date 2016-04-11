@@ -171,9 +171,12 @@ public class PerformanceMonitor {
 			processCpu1 = cpuInfo.readCpuStat(pid)[0];
 			idleCpu1 = cpuInfo.readCpuStat(pid)[1];
 			totalCpu1 = cpuInfo.readCpuStat(pid)[2];
-			processCpuRatio = fomart.format(100 * ((double) (processCpu1 - processCpu2) / ((double) (totalCpu1 - totalCpu2))));
-			totalCpuRatio = fomart.format(100 * ((double) ((totalCpu1 - idleCpu1) - (totalCpu2 - idleCpu2)) / (double) (totalCpu1 - totalCpu2)));
-	
+			if (processCpu1 - processCpu2 <= 0 || totalCpu1-totalCpu2 <=0) {
+				processCpuRatio = "0";
+			} else {
+				processCpuRatio = fomart.format(100 * ((double) (processCpu1 - processCpu2) / ((double) (totalCpu1 - totalCpu2))));
+				totalCpuRatio = fomart.format(100 * ((double) ((totalCpu1 - idleCpu1) - (totalCpu2 - idleCpu2)) / (double) (totalCpu1 - totalCpu2)));
+			}
 			// Memory
 			long pidMemory = memoryInfo.getPidMemorySize(pid, context);
 			pss = fomart.format((double) pidMemory / 1024);
@@ -200,7 +203,7 @@ public class PerformanceMonitor {
 			}
 	
 			if (null == desc || "".equals(desc.trim())){
-				desc = this.getTestCaseInfo() + "-" + this.getActionInfo();
+				desc = "";
 			}
 			
 			content = "," + mDateTime + "," + topActivity + "," + pss + "," + percent + "," + freeMem + ","
