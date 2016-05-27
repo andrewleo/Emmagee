@@ -42,6 +42,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -104,7 +105,7 @@ public class MainService extends Service {
 	private boolean isFloating;
 	private boolean isRoot;
 	private boolean isAutoStop = false;
-	private String processName, packageName, startActivity;
+	private String processName, packageName;
 	private int pid, uid;
 	private boolean isServiceStop = false;
 	private String sender, password, recipients, smtp;
@@ -188,22 +189,22 @@ public class MainService extends Service {
 		boolean isProcessStarted = false;
 		long startTime = System.currentTimeMillis();
 		while (System.currentTimeMillis() < startTime + Constants.WAIT_START_TIMEOUT) {
-			List<Programe> processList = procInfo.getRunningProcess(context);
-			for (Programe programe : processList) {
-				if ((programe.getPackageName() != null) && (programe.getPackageName().equals(packageName))) {
-					pid = programe.getPid();
-					Log.d(LOG_TAG, "pid:" + pid);
-					uid = programe.getUid();
-					if (pid != 0) {
-						isProcessStarted = true;
-						break;
-					}
-				}
+			pid = procInfo.getPidByPackageName(getBaseContext(), packageName);
+			if (pid != 0) {
+				isProcessStarted = true;
+				break;
 			}
 			if (isProcessStarted) {
 				break;
 			}
 		}
+		try {
+			uid = getPackageManager().getApplicationInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES).uid;
+		} catch (NameNotFoundException e) {
+			Log.e(LOG_TAG, "get uid exception: " + e.getMessage());
+			e.printStackTrace();
+		}
+		Log.d(LOG_TAG, String.format("uid = %s, pid = %s", uid, pid));
 	}
 
 	@Override
@@ -215,7 +216,6 @@ public class MainService extends Service {
 		startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		startActivity(startIntent);
 		waitForAppStart(packageName,getBaseContext());
-		startActivity = intent.resolveActivity(getPackageManager()).getShortClassName();
 		processName = intent.getExtras().getString("processName");
 		
 		cpuInfo = new CpuInfo(getBaseContext(), pid, Integer.toString(uid));
@@ -385,8 +385,6 @@ public class MainService extends Service {
 				if (isFloating && viFloatingWindow != null) {
 					windowManager.updateViewLayout(viFloatingWindow, wmParams);
 				}
-				// get app start time from logcat on every task running
-				getStartTimeFromLogcat();
 			} else {
 				Intent intent = new Intent();
 				intent.putExtra("isServiceStop", true);
@@ -396,42 +394,6 @@ public class MainService extends Service {
 			}
 		}
 	};
-
-	/**
-	 * Try to get start time from logcat.
-	 */
-	private void getStartTimeFromLogcat() {
-		if (!isGetStartTime || getStartTimeCount >= MAX_START_TIME_COUNT) {
-			return;
-		}
-		try {
-			// filter logcat by Tag:ActivityManager and Level:Info
-			String logcatCommand = "logcat -v time -d ActivityManager:I *:S";
-			Process process = Runtime.getRuntime().exec(logcatCommand);
-			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-			StringBuilder strBuilder = new StringBuilder();
-			String line = BLANK_STRING;
-
-			while ((line = bufferedReader.readLine()) != null) {
-				strBuilder.append(line);
-				strBuilder.append(Constants.LINE_END);
-				String regex = ".*Displayed.*" + startActivity + ".*\\+(.*)ms.*";
-				if (line.matches(regex)) {
-					Log.w("my logs", line);
-					if (line.contains("total")) {
-						line = line.substring(0, line.indexOf("total"));
-					}
-					startTime = line.substring(line.lastIndexOf("+") + 1, line.lastIndexOf("ms") + 2);
-					Toast.makeText(MainService.this, getString(R.string.start_time) + startTime, Toast.LENGTH_LONG).show();
-					isGetStartTime = false;
-					break;
-				}
-			}
-			getStartTimeCount++;
-		} catch (IOException e) {
-			Log.d(LOG_TAG, e.getMessage());
-		}
-	}
 
 	/**
 	 * Above JellyBean, we cannot grant READ_LOGS permission...
@@ -498,20 +460,9 @@ public class MainService extends Service {
 				}
 				// 当内存为0切cpu使用率为0时则是被测应用退出
 				if ("0".equals(processMemory)) {
-					if (isAutoStop) {
-						closeOpenedStream();
-						isServiceStop = true;
-						return;
-					} else {
-						Log.i(LOG_TAG, "未设置自动停止测试，继续监听");
-						// 如果设置应用退出后不自动停止，则需要每次监听时重新获取pid
-						Programe programe = procInfo.getProgrameByPackageName(this, packageName);
-						if (programe != null && programe.getPid() > 0) {
-							pid = programe.getPid();
-							uid = programe.getUid();
-							cpuInfo = new CpuInfo(getBaseContext(), pid, Integer.toString(uid));
-						}
-					}
+					closeOpenedStream();
+					isServiceStop = true;
+					return;
 				}
 			}
 

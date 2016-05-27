@@ -16,6 +16,9 @@
  */
 package com.netease.performancetestservice.utils;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,7 +29,7 @@ import android.app.ActivityManager.RunningTaskInfo;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Debug;
+import android.os.Build;
 import android.util.Log;
 
 /**
@@ -39,6 +42,7 @@ public class ProcessInfo {
 	private static final String LOG_TAG = "Emmagee-" + ProcessInfo.class.getSimpleName();
 
 	private static final String PACKAGE_NAME = "com.netease.performancetestservice";
+	private static final int ANDROID_L = 21;
 
 	/**
 	 * get information of all running processes,including package name ,process
@@ -125,5 +129,47 @@ public class ProcessInfo {
 			return null;
 	}
 	
+	/**
+	 * get pid by package name
+	 * 
+	 * @param context
+	 *            context of activity
+	 * @return pid
+	 */
+	public int getPidByPackageName(Context context, String packageName) {
+		Log.i(LOG_TAG, "start getLaunchedPid");
+		ActivityManager am = (ActivityManager) context
+				.getSystemService(Context.ACTIVITY_SERVICE);
+		// Note: getRunningAppProcesses return itself in API 22
+		if (Build.VERSION.SDK_INT < ANDROID_L) {
+			List<RunningAppProcessInfo> run = am.getRunningAppProcesses();
+			for (RunningAppProcessInfo runningProcess : run) {
+				if ((runningProcess.processName != null)
+						&& runningProcess.processName.equals(packageName)) {
+					return runningProcess.pid;
+				}
+			}
+		} else {
+			Log.i(LOG_TAG, "use top command to get pid");
+			try {
+				Process p = Runtime.getRuntime().exec("top -m 100 -n 1");
+				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+						p.getInputStream()));
+				String line = "";
+				while ((line = bufferedReader.readLine()) != null) {
+					if (line.contains(packageName)) {
+						line = line.trim();
+						String[] splitLine = line.split("\\s+");
+						if (packageName.equals(splitLine[splitLine.length - 1])) {
+							return Integer.parseInt(splitLine[0]);
+						}
+					}
+				}
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		return 0;
+	}
 
 }
