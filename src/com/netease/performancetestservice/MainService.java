@@ -66,7 +66,6 @@ import com.netease.performancetestservice.utils.Constants;
 import com.netease.performancetestservice.utils.CpuInfo;
 import com.netease.performancetestservice.utils.CurrentInfo;
 import com.netease.performancetestservice.utils.EncryptData;
-import com.netease.performancetestservice.utils.MailSender;
 import com.netease.performancetestservice.utils.MemoryInfo;
 import com.netease.performancetestservice.utils.MyApplication;
 import com.netease.performancetestservice.utils.ProcessInfo;
@@ -186,15 +185,10 @@ public class MainService extends Service {
 	 */
 	public void waitForAppStart(String packageName,Context context) {
 		Log.d(LOG_TAG, "wait for app start");
-		boolean isProcessStarted = false;
 		long startTime = System.currentTimeMillis();
 		while (System.currentTimeMillis() < startTime + Constants.WAIT_START_TIMEOUT) {
 			pid = procInfo.getPidByPackageName(getBaseContext(), packageName);
 			if (pid != 0) {
-				isProcessStarted = true;
-				break;
-			}
-			if (isProcessStarted) {
 				break;
 			}
 		}
@@ -427,7 +421,7 @@ public class MainService extends Service {
 		} catch (Exception e) {
 			currentBatt = Constants.NA;
 		}
-		ArrayList<String> processInfo = cpuInfo.getCpuRatioInfo(totalBatt, currentBatt, temperature, voltage, isRoot);
+		ArrayList<String> processInfo = cpuInfo.getCpuRatioInfo(totalBatt, currentBatt, temperature, voltage, false);
 		if (isFloating) {
 			String processCpuRatio = "0.00";
 			String totalCpuRatio = "0.00";
@@ -516,18 +510,6 @@ public class MainService extends Service {
 		}
 		isStop = true;
 		unregisterReceiver(batteryBroadcast);
-		boolean isSendSuccessfully = false;
-		try {
-			isSendSuccessfully = MailSender.sendTextMail(sender, des.decrypt(password), smtp, "Emmagee Performance Test Report", "see attachment",
-					resultFilePath, receivers);
-		} catch (Exception e) {
-			isSendSuccessfully = false;
-		}
-		if (isSendSuccessfully) {
-			Toast.makeText(this, getString(R.string.send_success_toast) + recipients, Toast.LENGTH_LONG).show();
-		} else {
-			Toast.makeText(this, getString(R.string.send_fail_toast) + MainService.resultFilePath, Toast.LENGTH_LONG).show();
-		}
 		super.onDestroy();
 		stopForeground(true);
 	}
