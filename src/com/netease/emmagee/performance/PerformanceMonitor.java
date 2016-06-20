@@ -145,6 +145,8 @@ public class PerformanceMonitor {
 			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
 			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
+			// 生成头文件
+			bw.write(HEADER_TEMPLATE + Constants.LINE_END);
 			bw.flush();
 		} catch (IOException e) {
 			Log.e(LOG_TAG, "create BufferedWriter exception: " + e.getMessage());
@@ -152,7 +154,7 @@ public class PerformanceMonitor {
 		Log.d(LOG_TAG, "end write report");
 	}
 	
-//	private static final String HEADER_TEMPLATE = "用例步骤描述,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V),截图";
+	private static final String HEADER_TEMPLATE = "用例步骤描述,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V),截图";
 	
 	/**
 	 * write data into certain file
