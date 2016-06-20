@@ -115,33 +115,44 @@ public class PerformanceMonitor {
 	 */
 	private void creatReport(String toolName, String dateTime) {
 		Log.d(LOG_TAG, "start write report");
-
-		String dir = "/sdcard/grape";
-		resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
-		try {
-			// 创建目录
-			File fileDir = new File(dir);
-			if (!fileDir.exists()) {
-				fileDir.mkdirs();
+		// 两个候选目录用于存储性能数据: /sdcard/grape/PerformanceMonitor.csv,  /sdcard/PerformanceMonitor.csv
+		String[] dirs = new String[] {"/sdcard/grape", "/sdcard"};
+		boolean createCompleted = false;
+		File resultFile = null;
+		// 这里尝试两个候选目录，如果都不行那暂时报异常出来
+		for (int i = 0; i < dirs.length; i ++) {
+			String dir = dirs[i];
+			resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
+			Log.i(LOG_TAG, "createNewFile in" + resultFilePath);
+			resultFile = new File(resultFilePath);
+			try {
+				// 创建目录
+				File fileDir = new File(dir);
+				if (!fileDir.exists()) {
+					fileDir.mkdirs();
+				}
+				resultFile.delete();
+				// 只有在性能结果文件不存在的情况下才创建文件，并生成头文件，让文件只保持一份就好
+				createCompleted = resultFile.createNewFile();
+				if (createCompleted) {
+					break;
+				}
+			} catch (Exception e) {
+				Log.w(LOG_TAG, "mkdir and createNewFile exception: " + e.getMessage());
 			}
-			// 先清除原本就存在的文件
-			File resultFile = new File(resultFilePath);
-			resultFile.delete();
-			// 只有在性能结果文件不存在的情况下才创建文件，并生成头文件，让文件只保持一份就好
-			resultFile.createNewFile();
+		}
+		try {
 			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
 			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
-			// 生成头文件
-			bw.write(HEADER_TEMPLATE + Constants.LINE_END);
 			bw.flush();
 		} catch (IOException e) {
-			Log.e(LOG_TAG, e.getMessage());
+			Log.e(LOG_TAG, "create BufferedWriter exception: " + e.getMessage());
 		}
 		Log.d(LOG_TAG, "end write report");
 	}
 	
-	private static final String HEADER_TEMPLATE = "用例步骤描述,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V),截图";
+//	private static final String HEADER_TEMPLATE = "用例步骤描述,时间,栈顶Activity名称,应用占用内存PSS(MB),应用占用内存比(%),机器剩余内存(MB),应用占用CPU率(%),CPU总使用率(%),流量(KB),电量(%),电流(mA),温度(C),电压(V),截图";
 	
 	/**
 	 * write data into certain file
@@ -218,6 +229,7 @@ public class PerformanceMonitor {
 			bw.flush();
 			Log.i(LOG_TAG, "*** writePerformanceData on " + mDateTime + " *** ");
 		} catch (Exception e) {
+			Log.e(LOG_TAG, "writePerformanceData exception: " + e.getMessage());
 			e.printStackTrace();
 		}
 
