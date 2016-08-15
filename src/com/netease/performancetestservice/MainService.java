@@ -272,39 +272,50 @@ public class MainService extends Service {
 	 * write the test result to csv format report.
 	 */
 	private void createResultCsv() {
-		Calendar cal = Calendar.getInstance();
-		SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-		String mDateTime;
-		String heapData = "";
-		if ((Build.MODEL.equals("sdk")) || (Build.MODEL.equals("google_sdk")))
-			mDateTime = formatter.format(cal.getTime().getTime() + 8 * 60 * 60 * 1000);
-		else
-			mDateTime = formatter.format(cal.getTime().getTime());
-		resultFilePath = PERF_MONITOR_FILE;
+		Log.d(LOG_TAG, "start write report");
+		// 两个候选目录用于存储性能数据: /sdcard/grape/PerformanceMonitor.csv,  /sdcard/PerformanceMonitor.csv
+		String[] dirs = new String[] {"/sdcard/grape", "/sdcard"};
+		boolean createCompleted = false;
+		File resultFile = null;
+		// 这里尝试两个候选目录，如果都不行那暂时报异常出来
+		for (int i = 0; i < dirs.length; i ++) {
+			String dir = dirs[i];
+			resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
+			Log.i(LOG_TAG, "createNewFile in" + resultFilePath);
+			resultFile = new File(resultFilePath);
+			try {
+				// 创建目录
+				File fileDir = new File(dir);
+				if (!fileDir.exists()) {
+					fileDir.mkdirs();
+				}
+				resultFile.delete();
+				// 只有在性能结果文件不存在的情况下才创建文件，并生成头文件，让文件只保持一份就好
+				createCompleted = resultFile.createNewFile();
+				if (createCompleted) {
+					break;
+				}
+			} catch (Exception e) {
+				Log.w(LOG_TAG, "mkdir and createNewFile exception: " + e.getMessage());
+			}
+		}
 		try {
-			File resultFile = new File(resultFilePath);
-			Log.d(LOG_TAG, "*** resultFilePath ***"+resultFilePath);
-			boolean createDir = new File(PERF_MONITOR_DIR).mkdirs();
-			Log.d(LOG_TAG, "*** createDir ***"+createDir);
-			boolean createFile = resultFile.createNewFile();
-			Log.d(LOG_TAG, "*** createFile ***"+createFile);
-			out = new FileOutputStream(resultFile);
-			osw = new OutputStreamWriter(out,"utf-8");
+			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
-			long totalMemorySize = memoryInfo.getTotalMemory();
-			String totalMemory = fomart.format((double) totalMemorySize / 1024);
-			String multiCpuTitle = BLANK_STRING;
+			// 生成头文件
 			// 用例，时间，栈顶activity，pss，内存占比，剩余内存，cpu占比，cpu总占比，流量，电量，电流，电池温度，电压
 			bw.write("测试用例信息" + Constants.COMMA + getString(R.string.timestamp) + Constants.COMMA + getString(R.string.top_activity) + Constants.COMMA
 					+ getString(R.string.used_mem_PSS) + Constants.COMMA + getString(R.string.used_mem_ratio) + Constants.COMMA
 					+ getString(R.string.mobile_free_mem) + Constants.COMMA + getString(R.string.app_used_cpu_ratio) + Constants.COMMA
-					+ getString(R.string.total_used_cpu_ratio) + multiCpuTitle + Constants.COMMA + getString(R.string.traffic) + Constants.COMMA
+					+ getString(R.string.total_used_cpu_ratio) + Constants.COMMA + getString(R.string.traffic) + Constants.COMMA
 					+ getString(R.string.battery) + Constants.COMMA + getString(R.string.current) + Constants.COMMA + getString(R.string.temperature)
 					+ Constants.COMMA + getString(R.string.voltage) + Constants.LINE_END);
 			bw.flush();
 		} catch (IOException e) {
-			Log.e(LOG_TAG, e.getMessage());
+			Log.e(LOG_TAG, "create BufferedWriter exception: " + e.getMessage());
 		}
+		Log.d(LOG_TAG, "end write report");
 	}
 
 	/**
