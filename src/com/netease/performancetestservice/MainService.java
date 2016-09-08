@@ -281,7 +281,7 @@ public class MainService extends Service {
 		for (int i = 0; i < dirs.length; i ++) {
 			String dir = dirs[i];
 			resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
-			Log.i(LOG_TAG, "createNewFile in" + resultFilePath);
+			Log.i(LOG_TAG, "createNewFile in " + resultFilePath);
 			resultFile = new File(resultFilePath);
 			try {
 				// 创建目录
@@ -296,6 +296,7 @@ public class MainService extends Service {
 					break;
 				}
 			} catch (Exception e) {
+				e.printStackTrace();
 				Log.w(LOG_TAG, "mkdir and createNewFile exception: " + e.getMessage());
 			}
 		}
