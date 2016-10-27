@@ -129,15 +129,21 @@ public class PerformanceMonitor {
 				// 创建目录
 				File fileDir = new File(dir);
 				if (!fileDir.exists()) {
-					fileDir.mkdirs();
+					boolean createDir = fileDir.mkdirs();
+					Log.d(LOG_TAG, "create dir: " + createDir);
+				} else if (resultFile.exists()) {
+					Log.d(LOG_TAG, "perf file existed, delete it");
+					resultFile.delete();
 				}
-				resultFile.delete();
 				// 只有在性能结果文件不存在的情况下才创建文件，并生成头文件，让文件只保持一份就好
 				createCompleted = resultFile.createNewFile();
 				if (createCompleted) {
 					break;
+				} else {
+					Log.d(LOG_TAG, "createNewFile failed");
 				}
 			} catch (Exception e) {
+				e.printStackTrace();
 				Log.w(LOG_TAG, "mkdir and createNewFile exception: " + e.getMessage());
 			}
 		}
