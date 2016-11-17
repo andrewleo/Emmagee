@@ -95,7 +95,6 @@ public class MainService extends Service {
 	private TextView txtTraffic;
 	private Button btnStop;
 	private Button btnWifi;
-	private int delaytime;
 	private DecimalFormat fomart;
 	private MemoryInfo memoryInfo;
 	private WifiManager wifiManager;
@@ -124,16 +123,13 @@ public class MainService extends Service {
 	private CurrentInfo currentInfo;
 	private BatteryInfoBroadcastReceiver batteryBroadcast = null;
 
-	// get start time
-	private static final int MAX_START_TIME_COUNT = 5;
 	private static final String START_TIME = "#startTime";
-	private int getStartTimeCount = 0;
-	private boolean isGetStartTime = true;
 	private String startTime = "";
 	public static final String SERVICE_ACTION = "com.netease.action.emmageeService";
 	private static final String BATTERY_CHANGED = "android.intent.action.BATTERY_CHANGED";
 	private static final String PERF_MONITOR_DIR = "/sdcard/grape";
 	private static final String PERF_MONITOR_FILE = PERF_MONITOR_DIR+"/PerformanceMonitor.csv";
+	private int interval = 5000;
 	
 	@Override
 	public void onCreate() {
@@ -201,11 +197,24 @@ public class MainService extends Service {
 		Log.d(LOG_TAG, String.format("uid = %s, pid = %s", uid, pid));
 	}
 
+	private int getInterval(String intervalParam) {
+		try {
+			if (intervalParam != null && !"".endsWith(intervalParam)) {
+				return Integer.parseInt(intervalParam) * 1000;
+			}
+		} catch (Exception e) {
+			return interval;
+		}
+		return interval;
+	}
+	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.i(LOG_TAG, "service onStart");
 		packageName = intent.getExtras().getString("package");
-		Log.d(LOG_TAG, "packageName======"+packageName);
+		interval = getInterval(intent.getExtras().getString("interval"));
+		Log.d(LOG_TAG, "packageName="+packageName);
+		Log.d(LOG_TAG, "interval="+interval);
 		Intent startIntent = getPackageManager().getLaunchIntentForPackage(packageName);
 		startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		startActivity(startIntent);
@@ -257,7 +266,6 @@ public class MainService extends Service {
 	private void readSettingInfo() {
 		SharedPreferences preferences = Settings.getDefaultSharedPreferences(getApplicationContext());
 		int interval = preferences.getInt(Settings.KEY_INTERVAL, 5);
-		delaytime = interval * 1000;
 		isFloating = preferences.getBoolean(Settings.KEY_ISFLOAT, false);
 		sender = preferences.getString(Settings.KEY_SENDER, BLANK_STRING);
 		password = preferences.getString(Settings.KEY_PASSWORD, BLANK_STRING);
@@ -387,7 +395,7 @@ public class MainService extends Service {
 		public void run() {
 			if (!isServiceStop) {
 				dataRefresh();
-				handler.postDelayed(this, delaytime);
+				handler.postDelayed(this, interval);
 				if (isFloating && viFloatingWindow != null) {
 					windowManager.updateViewLayout(viFloatingWindow, wmParams);
 				}
