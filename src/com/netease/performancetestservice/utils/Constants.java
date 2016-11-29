@@ -13,6 +13,6 @@ public final class Constants {
 	public static final String LINE_END = "\r\n";
 	public static final String COLON = ":";
 	
-	public static final int WAIT_START_TIMEOUT = 10000;
+	public static final int WAIT_START_TIMEOUT = 60000;
 
 }

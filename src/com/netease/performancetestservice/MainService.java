@@ -213,11 +213,14 @@ public class MainService extends Service {
 		Log.i(LOG_TAG, "service onStart");
 		packageName = intent.getExtras().getString("package");
 		interval = getInterval(intent.getExtras().getString("interval"));
+		String startApp = intent.getExtras().getString("startApp");
 		Log.d(LOG_TAG, "packageName="+packageName);
 		Log.d(LOG_TAG, "interval="+interval);
-		Intent startIntent = getPackageManager().getLaunchIntentForPackage(packageName);
-		startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(startIntent);
+		if (startApp != null && !"".equals(startApp)) {
+			Intent startIntent = getPackageManager().getLaunchIntentForPackage(packageName);
+			startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			startActivity(startIntent);
+		}
 		waitForAppStart(packageName,getBaseContext());
 		processName = intent.getExtras().getString("processName");
 		
