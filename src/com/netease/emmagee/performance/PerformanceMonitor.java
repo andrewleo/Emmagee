@@ -148,13 +148,18 @@ public class PerformanceMonitor {
 			}
 		}
 		try {
-			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			if (resultFile.exists()) {
+				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			} else {
+				out = context.openFileOutput("PerformanceMonitor.csv", Context.MODE_WORLD_READABLE + Context.MODE_WORLD_WRITEABLE);
+			}
 			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
 			// 生成头文件
 			bw.write(HEADER_TEMPLATE + Constants.LINE_END);
 			bw.flush();
 		} catch (IOException e) {
+			e.printStackTrace();
 			Log.e(LOG_TAG, "create BufferedWriter exception: " + e.getMessage());
 		}
 		Log.d(LOG_TAG, "end write report");
