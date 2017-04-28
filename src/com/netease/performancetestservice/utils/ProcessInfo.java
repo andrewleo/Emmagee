@@ -117,24 +117,51 @@ public class ProcessInfo {
 				}
 			}
 		} else {
-			Log.i(LOG_TAG, "use top command to get pid");
-			try {
-				Process p = Runtime.getRuntime().exec("top -m 100 -n 1");
-				BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-						p.getInputStream()));
-				String line = "";
-				while ((line = bufferedReader.readLine()) != null) {
-					if (line.contains(packageName)) {
-						line = line.trim();
-						String[] splitLine = line.split("\\s+");
-						if (packageName.equals(splitLine[splitLine.length - 1])) {
-							return Integer.parseInt(splitLine[0]);
-						}
+			Log.i(LOG_TAG, "use top/ps command to get pid");
+			int psPid = getPidByPs(packageName);
+			return psPid > 0 ? psPid : getPidByTop(packageName); 
+		}
+		return 0;
+	}
+	
+	private int getPidByTop(String packageName) {
+		try {
+			Process p = Runtime.getRuntime().exec("top -m 100 -n 1");
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+					p.getInputStream()));
+			String line = "";
+			while ((line = bufferedReader.readLine()) != null) {
+				if (line.contains(packageName)) {
+					line = line.trim();
+					String[] splitLine = line.split("\\s+");
+					if (packageName.equals(splitLine[splitLine.length - 1])) {
+						return Integer.parseInt(splitLine[0]);
 					}
 				}
-			} catch (IOException e1) {
-				e1.printStackTrace();
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+	
+	private int getPidByPs(String packageName) {
+		try {
+			Process p = Runtime.getRuntime().exec("ps");
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+					p.getInputStream()));
+			String line = "";
+			while ((line = bufferedReader.readLine()) != null) {
+				if (line.contains(packageName)) {
+					line = line.trim();
+					String[] splitLine = line.split("\\s+");
+					if (packageName.equals(splitLine[splitLine.length - 1])) {
+						return Integer.parseInt(splitLine[1]);
+					}
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return 0;
 	}

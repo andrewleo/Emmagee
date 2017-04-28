@@ -182,11 +182,8 @@ public class MainService extends Service {
 	public void waitForAppStart(String packageName,Context context) {
 		Log.d(LOG_TAG, "wait for app start");
 		long startTime = System.currentTimeMillis();
-		while (System.currentTimeMillis() < startTime + Constants.WAIT_START_TIMEOUT) {
+		while (pid == 0 && (System.currentTimeMillis() < startTime + Constants.WAIT_START_TIMEOUT)) {
 			pid = procInfo.getPidByPackageName(getBaseContext(), packageName);
-			if (pid != 0) {
-				break;
-			}
 		}
 		try {
 			uid = getPackageManager().getApplicationInfo(packageName, PackageManager.GET_UNINSTALLED_PACKAGES).uid;
@@ -208,14 +205,21 @@ public class MainService extends Service {
 		return interval;
 	}
 	
+	private int toInt(String input) {
+		try {
+			return Integer.parseInt(input);
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.i(LOG_TAG, "service onStart");
 		packageName = intent.getExtras().getString("package");
 		interval = getInterval(intent.getExtras().getString("interval"));
 		String startApp = intent.getExtras().getString("startApp");
-		Log.d(LOG_TAG, "packageName="+packageName);
-		Log.d(LOG_TAG, "interval="+interval);
+		pid = toInt(intent.getExtras().getString("pid"));
 		if (startApp != null && !"".equals(startApp)) {
 			Intent startIntent = getPackageManager().getLaunchIntentForPackage(packageName);
 			startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
