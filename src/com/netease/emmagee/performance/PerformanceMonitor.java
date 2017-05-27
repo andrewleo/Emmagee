@@ -26,20 +26,21 @@ import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
+import com.netease.emmagee.performance.utils.Constants;
+import com.netease.emmagee.performance.utils.CpuInfo;
+import com.netease.emmagee.performance.utils.CurrentInfo;
+import com.netease.emmagee.performance.utils.MemoryInfo;
+import com.netease.emmagee.performance.utils.TrafficInfo;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
-
-import com.netease.emmagee.performance.utils.Constants;
-import com.netease.emmagee.performance.utils.CpuInfo;
-import com.netease.emmagee.performance.utils.CurrentInfo;
-import com.netease.emmagee.performance.utils.MemoryInfo;
-import com.netease.emmagee.performance.utils.ProcessInfo;
-import com.netease.emmagee.performance.utils.TrafficInfo;
 
 /**
  * Service running in background
@@ -74,6 +75,7 @@ public class PerformanceMonitor {
 	private CurrentInfo currentInfo;
 
 	private String toolName;
+	private static final String PERF_CSV = "PerformanceMonitor.csv";
 
 	public PerformanceMonitor(Context context, String packageName, String toolName, String mDateTime) {
 		this.context = context;
@@ -122,7 +124,7 @@ public class PerformanceMonitor {
 		// 这里尝试两个候选目录，如果都不行那暂时报异常出来
 		for (int i = 0; i < dirs.length; i ++) {
 			String dir = dirs[i];
-			resultFilePath = dir + "/PerformanceMonitor.csv"; // 这边的性能文件命名改简单一点
+			resultFilePath = dir + "/" + PERF_CSV; // 这边的性能文件命名改简单一点
 			Log.i(LOG_TAG, "createNewFile in" + resultFilePath);
 			resultFile = new File(resultFilePath);
 			try {
@@ -151,8 +153,14 @@ public class PerformanceMonitor {
 			if (resultFile.exists()) {
 				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
 			} else {
-				out = context.openFileOutput("PerformanceMonitor.csv", Context.MODE_WORLD_READABLE + Context.MODE_WORLD_WRITEABLE);
+				if (Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
+					// 在android nougat版本以后，MODE_WORLD_READABLE和MODE_WORLD_WRITEABLE废弃，使用时会出现SecurityException
+					out = context.openFileOutput(PERF_CSV, Context.MODE_WORLD_READABLE + Context.MODE_WORLD_WRITEABLE);
+				} else {
+					resultFile = new File(Environment.getExternalStorageDirectory(), PERF_CSV);
+				}
 			}
+			Log.d(LOG_TAG, "perf file path: " + resultFile.getAbsolutePath());
 			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
 			// 生成头文件
