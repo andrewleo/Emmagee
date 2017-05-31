@@ -153,11 +153,12 @@ public class PerformanceMonitor {
 			if (resultFile.exists()) {
 				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
 			} else {
-				if (Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) {
+				if (Build.VERSION.SDK_INT < 24) {
 					// 在android nougat版本以后，MODE_WORLD_READABLE和MODE_WORLD_WRITEABLE废弃，使用时会出现SecurityException
 					out = context.openFileOutput(PERF_CSV, Context.MODE_WORLD_READABLE + Context.MODE_WORLD_WRITEABLE);
 				} else {
 					resultFile = new File(Environment.getExternalStorageDirectory(), PERF_CSV);
+					out = new FileOutputStream(resultFile, true);
 				}
 			}
 			Log.d(LOG_TAG, "perf file path: " + resultFile.getAbsolutePath());
