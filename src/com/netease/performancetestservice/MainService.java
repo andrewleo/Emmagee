@@ -46,6 +46,7 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.wifi.WifiManager;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
@@ -130,6 +131,7 @@ public class MainService extends Service {
 	private static final String PERF_MONITOR_DIR = "/sdcard/grape";
 	private static final String PERF_MONITOR_FILE = PERF_MONITOR_DIR+"/PerformanceMonitor.csv";
 	private int interval = 5000;
+	private static final String PERF_CSV = "PerformanceMonitor.csv";
 	
 	@Override
 	public void onCreate() {
@@ -316,7 +318,17 @@ public class MainService extends Service {
 			}
 		}
 		try {
-			out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			if (resultFile.exists()) {
+				out = new FileOutputStream(resultFile, true); // 在文件内容后继续加内容
+			} else {
+				if (Build.VERSION.SDK_INT < 24) {
+					// 在android nougat版本以后，MODE_WORLD_READABLE和MODE_WORLD_WRITEABLE废弃，使用时会出现SecurityException
+					out = this.openFileOutput(PERF_CSV, Context.MODE_WORLD_READABLE + Context.MODE_WORLD_WRITEABLE);
+				} else {
+					resultFile = new File(Environment.getExternalStorageDirectory(), PERF_CSV);
+					out = new FileOutputStream(resultFile, true);
+				}
+			}
 			osw = new OutputStreamWriter(out, "utf-8");
 			bw = new BufferedWriter(osw);
 			// 生成头文件
